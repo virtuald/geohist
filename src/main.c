@@ -43,15 +43,7 @@
 #include <mysql/mysql.h>
 #include <gps.h>
 
-// gpsd error timeout, in seconds
-#define GPSD_TIMEOUT 10
-// gpsd poll interval, in seconds
-#define GPSD_POLL_INTERVAL 10
-// sql statement to be executed
-#define SQL_INSERT_STMT "INSERT INTO points (time,latitude,longitude,course,speed,climb,altitude) VALUES (?,?,?,?,?,?,?)"
-
-
-void child_function(void);
+#include "gpslog.h"
 
 // globals.. ew
 MYSQL mysql;
@@ -61,15 +53,13 @@ int main(int argc, char ** argv){
 
 	pid_t pid;
 
-	// validate args
-
 	// ignore kids
 	signal(SIGCLD,SIG_IGN);
 
 	// establish a connection to the MySQL server, or die
 	mysql_init(&mysql);
 
-	if (mysql_real_connect(&mysql,"localhost","gpslog","somepassword","gpslog",0,NULL,0) != &mysql){
+	if (mysql_real_connect(&mysql,SQL_SERVER,SQL_USERNAME,SQL_PASSWORD,SQL_DATABASE,SQL_PORT,NULL,0) != &mysql){
 		fprintf(stderr,"Failed to connect to database: %s\n",mysql_error(&mysql));
 		exit(EXIT_FAILURE);
 	}
@@ -84,8 +74,11 @@ int main(int argc, char ** argv){
 
 
 	// fork off :p
-	//pid = fork();
+#ifndef DEBUG
+	pid = fork();
+#else
 	pid = 0;
+#endif
 
 	switch(pid){
 		case 0:
@@ -116,8 +109,12 @@ int main(int argc, char ** argv){
  */
 void child_function(){
 
-	int ret,i;
+	int ret,i,first_time = 1;
 	double nan = NAN;
+
+	double gps_last_latitude = NAN, drift_latitude;
+	double gps_last_longitude = NAN, drift_longitude;
+
 	struct gps_data_t * gps_data;
 	struct gps_fix_t * gps_fix;
 
@@ -128,7 +125,6 @@ void child_function(){
 		bind[i].buffer_type = MYSQL_TYPE_DOUBLE;
 	}
 
-
 	while (1){
 
 		// open a connection to gpsd
@@ -136,8 +132,7 @@ void child_function(){
 
 		// if it fails, then wait a timeout period and try again
 		if (gps_data == NULL){
-			// probably should use syslog..
-			fprintf(stderr,"gps_open error: %d\n",errno);
+			GPSLOG_OUT("gps_open error: %d\n",errno);
 		}else{
 
 			// continuously loop and log
@@ -153,31 +148,49 @@ void child_function(){
 
 				// do something with the data we care about
 				if (!gps_data->online){
-					fprintf(stderr,"gpsd: offline\n");
+					GPSLOG_OUT("gpsd: offline\n");
 				}else{
 					
 					gps_fix = &gps_data->fix;
 
-					printf("gpsd response: time %f ",gps_fix->time);
+					GPSLOG_OUT("gpsd response: time %f ",gps_fix->time);
 					bind[0].buffer = &gps_fix->time;
+
+					// sometimes, these numbers will be nonsense, but thats ok.. :)
+					drift_latitude = fabs(gps_fix->latitude - gps_last_latitude);
+					drift_longitude = fabs(gps_fix->longitude - gps_last_longitude);
 
 					// the gps_fix_t structure contains the interesting info we want.. 
 					switch (gps_fix->mode){
 						case MODE_NOT_SEEN:
-							printf("Fix: Searching...");
+							GPSLOG_OUT("Fix: Searching...");
 							break;
 
 						case MODE_NO_FIX:
-							printf("Fix: None");
+							GPSLOG_OUT("Fix: None");
 							break;
 
 						case MODE_2D:
-							printf("Fix: 2d Lat: %f Long: %f Course: %f Speed: %f Climb: %f",
+							
+							// decide whether we want to ignore this value or not
+							// don't record the value if we ignored it
+							if (!first_time || (drift_latitude < GPS_DRIFT || drift_longitude < GPS_DRIFT)){
+
+								GPSLOG_OUT("Ignored! Drift val: lat %f long %f\n",drift_latitude,drift_longitude);
+								break;
+							}
+							
+							first_time = 0;
+
+							GPSLOG_OUT("Fix: 2d Lat: %f Long: %f Course: %f Speed: %f Climb: %f",
 								gps_fix->latitude,
 								gps_fix->longitude,
 								gps_fix->track,
 								gps_fix->speed,
 								gps_fix->climb);
+
+							gps_last_latitude = gps_fix->latitude;
+							gps_last_longitude = gps_fix->longitude; 
 
 							bind[1].buffer = (char*)&(gps_fix->latitude);
 							bind[2].buffer = (char*)&gps_fix->longitude;
@@ -192,13 +205,26 @@ void child_function(){
 							break;
 
 						case MODE_3D:
-							printf("Fix: 3d Lat: %f Long: %f Course: %f Speed: %f Climb: %f Alt: %f",
+
+							// decide whether we want to ignore this value or not
+							// don't record the value if we ignored it
+							if (!first_time || (drift_latitude < GPS_DRIFT || drift_longitude < GPS_DRIFT)){
+								GPSLOG_OUT("Ignored! Drift val: lat %f long %f\n",drift_latitude,drift_longitude);
+								break;
+							}
+
+							first_time = 0;
+
+							GPSLOG_OUT("Fix: 3d Lat: %f Long: %f Course: %f Speed: %f Climb: %f Alt: %f",
 								gps_fix->latitude,
 								gps_fix->longitude,
 								gps_fix->track,
 								gps_fix->speed,
 								gps_fix->climb,
 								gps_fix->altitude);
+
+							gps_last_latitude = gps_fix->latitude;
+							gps_last_longitude = gps_fix->longitude;
 
                             bind[1].buffer = &gps_fix->latitude;
 							bind[2].buffer = &gps_fix->longitude;
@@ -208,15 +234,15 @@ void child_function(){
 							bind[6].buffer = &gps_fix->altitude;
 
 							if (mysql_stmt_bind_param(stmt,bind) || mysql_stmt_execute(stmt))
-								fprintf(stderr,"error executing mysql statement: %s\n",mysql_stmt_error(stmt));
+								GPSLOG_OUT("error executing mysql statement: %s",mysql_stmt_error(stmt));
 
 							break;
 
 						default:
-							fprintf(stderr,"invalid fix data!\n");		
+							GPSLOG_OUT("invalid fix data!");		
 					}
 
-					printf("\n");
+					GPSLOG_OUT("\n");
 
 				}
 

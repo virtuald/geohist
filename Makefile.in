@@ -156,6 +156,7 @@ top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 SUBDIRS = src
 dist_doc_data = README
+EXTRA_DIST = gpslog.sql
 all: config.h
 	$(MAKE) $(AM_MAKEFLAGS) all-recursive
 
