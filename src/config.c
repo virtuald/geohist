@@ -26,3 +26,33 @@
 *
 */
 
+
+#include <stdlib.h>
+#include <stdio.h>
+#include <unistd.h>
+
+char * config_str;
+
+// load the configuration file
+int config_init(const char * file_name){
+
+}
+
+// get string from configuration file
+int config_get_str(const char * param, char * ret){
+	
+}
+
+// get integer from config file
+int config_get_int(const char * param, int * ret){
+
+
+}
+
+// free the memory
+void config_close(){
+	if (config_str)
+		free(config_str);
+}
+
+

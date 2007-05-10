@@ -1,0 +1,42 @@
+gpslog v0.1 - (C)2007 Dustin Spicuzza
+==================================================================
+
+The latest version of gpslog can be obtained from 
+
+http://www.virtualroadside.com/gpslog/
+
+This is a simple program I wrote to log GPS data retrieved from
+GPSD into a mysql database. It is designed to be standalone and 
+*just work*. I wrote the program because I have not been able to 
+find a logging program that was standalone and could be running
+continuously. There are a number of 
+programs I am aware of that have GPS logging capabilities:
+
+	- Kismet
+	- GPSDrive
+
+
+Installation
+=============
+
+This is your typical autotools-based install... 
+
+./configure
+make
+make install
+
+
+Usage
+======
+
+TODO: Not sure yet
+
+
+Comments/Questions
+===================
+
+Feel free to drop me a line if you have any questions.
+
+Dustin Spicuzza <dustin@virtualroadside.com>
+
+
