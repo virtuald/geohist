@@ -1,41 +1,84 @@
-gpslog v0.1 - (C)2007 Dustin Spicuzza
-==================================================================
+geoHist v0.1 - (C)2007 Dustin Spicuzza
+================================================================================
 
-The latest version of gpslog can be obtained from 
+This software is released under a modified BSD-style license agreement. Please
+refer to COPYING for more information.
 
-http://www.virtualroadside.com/gpslog/
+The latest version of geoHist can be obtained from 
 
-This is a simple program I wrote to log GPS data retrieved from
-GPSD into a mysql database. It is designed to be standalone and 
-*just work*. I wrote the program because I have not been able to 
-find a logging program that was standalone and could be running
-continuously. There are a number of 
-programs I am aware of that have GPS logging capabilities:
+	http://www.virtualroadside.com/geoHist/
 
-	- Kismet
-	- GPSDrive
+This is a simple program I wrote to log GPS data retrieved from GPSD into a 
+mysql database. It is designed to meet the following requirements: 
 
+	* Standalone
+	* Run from system startup to shutdown
+	* Small/fast, non-intrusive
+	* Robust
+	* Log data to an SQL database
+
+Description
+============
+
+geoHist will poll GPSD every 10 seconds and then send that data to a 
+preconfigured MySQL database. It will attempt to detect if you are standing 
+still, and if you are then it will NOT log the data. It decides this using a 
+simple drift factor. It will always log position to the database at least 
+once if there is a satellite fix.
+
+I designed geoHist to be used with my linux-based car computer. It is designed
+to be configured once, and never touched again (except to export data).
+
+System Requirements
+====================
+	
+	* GPSD (http://gpsd.berlios.de)
+	* A GPS device that works with GPSD
+	* MySQL (http://www.mysql.com)
+	
 
 Installation
 =============
 
 This is your typical autotools-based install... 
 
-./configure
-make
-make install
+	tar -xjf geoHist-0.1.tar.bz2
+	./configure
+	make && make install
 
+Then, you need to create the table for geoHist to log stuff to. 
+
+	mysql -u root -p < geoHist.sql
+
+You will need to add geoHist to your system startup scripts somehow. I have
+included a sample gentoo rcscript called geohist.init, which should be 
+copied to /etc/init.d/geohist. You can then run rc-update add geohist default
+and it should start at bootup.
+
+At the moment, there are no configuration files because I personally don't 
+feel the need to do so at the moment. If you want to change something, then 
+you must modify src/geohist.h, change the appropriate variables, and 
+recompile. Feel free to send me a patch to fix that.
+
+If you are having issues or to verify proper configuration, then you can run 
+./configure using the option --enable-debug . Then you can run geoHist and 
+it will print messages out to the console and tell you what its doing at 
+the moment.
 
 Usage
 ======
 
-TODO: Not sure yet
+All this does is log your data into mysql. You will need to figure out what 
+exactly you want to do with that data. At the moment, I'm not quite sure 
+what I'm going to do with the data either, but if I figure something out 
+I will surely include it in the next release.
 
 
 Comments/Questions
 ===================
 
-Feel free to drop me a line if you have any questions.
+Feel free to drop me a line if you have any questions. If you have changes,
+improvements, bugfixes, or whatever -- send me a patch. :)
 
 Dustin Spicuzza <dustin@virtualroadside.com>
 

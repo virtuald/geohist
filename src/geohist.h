@@ -21,11 +21,11 @@
 // sql server
 #define SQL_SERVER "localhost"
 // sql database
-#define SQL_USERNAME "gpslog"
+#define SQL_USERNAME "geohist"
 // sql password
 #define SQL_PASSWORD "somepassword"
 // sql database
-#define SQL_DATABASE "gpslog"
+#define SQL_DATABASE "geohist"
 // sql port
 #define SQL_PORT 0
 

@@ -31,7 +31,7 @@ POST_INSTALL = :
 NORMAL_UNINSTALL = :
 PRE_UNINSTALL = :
 POST_UNINSTALL = :
-bin_PROGRAMS = gpslog$(EXEEXT)
+bin_PROGRAMS = geohist$(EXEEXT)
 subdir = src
 DIST_COMMON = $(noinst_HEADERS) $(srcdir)/Makefile.am \
 	$(srcdir)/Makefile.in
@@ -45,9 +45,9 @@ CONFIG_CLEAN_FILES =
 am__installdirs = "$(DESTDIR)$(bindir)"
 binPROGRAMS_INSTALL = $(INSTALL_PROGRAM)
 PROGRAMS = $(bin_PROGRAMS)
-am_gpslog_OBJECTS = main.$(OBJEXT)
-gpslog_OBJECTS = $(am_gpslog_OBJECTS)
-gpslog_DEPENDENCIES =
+am_geohist_OBJECTS = main.$(OBJEXT)
+geohist_OBJECTS = $(am_geohist_OBJECTS)
+geohist_DEPENDENCIES =
 DEFAULT_INCLUDES = -I. -I$(top_builddir)@am__isrc@
 depcomp = $(SHELL) $(top_srcdir)/depcomp
 am__depfiles_maybe = depfiles
@@ -55,8 +55,8 @@ COMPILE = $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) \
 	$(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS)
 CCLD = $(CC)
 LINK = $(CCLD) $(AM_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) $(LDFLAGS) -o $@
-SOURCES = $(gpslog_SOURCES)
-DIST_SOURCES = $(gpslog_SOURCES)
+SOURCES = $(geohist_SOURCES)
+DIST_SOURCES = $(geohist_SOURCES)
 HEADERS = $(noinst_HEADERS)
 ETAGS = etags
 CTAGS = ctags
@@ -147,9 +147,9 @@ sysconfdir = @sysconfdir@
 target_alias = @target_alias@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
-noinst_HEADERS = gpslog.h
-gpslog_SOURCES = main.c
-gpslog_LDADD = -lgps -lmysqlclient
+noinst_HEADERS = geohist.h
+geohist_SOURCES = main.c
+geohist_LDADD = -lgps -lmysqlclient
 all: all-am
 
 .SUFFIXES:
@@ -206,9 +206,9 @@ uninstall-binPROGRAMS:
 
 clean-binPROGRAMS:
 	-test -z "$(bin_PROGRAMS)" || rm -f $(bin_PROGRAMS)
-gpslog$(EXEEXT): $(gpslog_OBJECTS) $(gpslog_DEPENDENCIES) 
-	@rm -f gpslog$(EXEEXT)
-	$(LINK) $(gpslog_OBJECTS) $(gpslog_LDADD) $(LIBS)
+geohist$(EXEEXT): $(geohist_OBJECTS) $(geohist_DEPENDENCIES) 
+	@rm -f geohist$(EXEEXT)
+	$(LINK) $(geohist_OBJECTS) $(geohist_LDADD) $(LIBS)
 
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT)

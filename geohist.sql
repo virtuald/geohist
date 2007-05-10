@@ -1,13 +1,13 @@
 --
 -- (C)2007 Dustin Spicuzza
 --
--- Create MySQL DB for gpslog. Run this with
+-- Create MySQL DB for geohist. Run this with
 --
---		mysql [params] < gpslog.sql
+--		mysql [params] < geohist.sql
 --
 
-CREATE DATABASE gpslog;
-USE gpslog;
+CREATE DATABASE geohist;
+USE geohist;
 
 CREATE TABLE points (
 	id			BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
@@ -20,7 +20,7 @@ CREATE TABLE points (
 	altitude	DOUBLE NOT NULL
 );
 
-GRANT ALL ON gpslog.* TO 'gpslog'@'localhost' IDENTIFIED BY 'somepassword';
+GRANT ALL ON geohist.* TO 'geohist'@'localhost' IDENTIFIED BY 'somepassword';
 
 
 

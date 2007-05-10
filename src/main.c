@@ -30,6 +30,9 @@
 
 #include <config.h>
 
+#include <sys/types.h>
+#include <pwd.h>
+
 #include <stdint.h>
 #include <linux/limits.h>
 
@@ -43,7 +46,7 @@
 #include <mysql/mysql.h>
 #include <gps.h>
 
-#include "gpslog.h"
+#include "geohist.h"
 
 // globals.. ew
 MYSQL mysql;
@@ -52,9 +55,12 @@ MYSQL_STMT * stmt;
 int main(int argc, char ** argv){
 
 	pid_t pid;
+	struct passwd * pw;
 
-	// ignore kids
+	// ignore kids, drop permissions
+#ifndef DEBUG
 	signal(SIGCLD,SIG_IGN);
+#endif
 
 	// establish a connection to the MySQL server, or die
 	mysql_init(&mysql);
@@ -72,10 +78,20 @@ int main(int argc, char ** argv){
 		exit(EXIT_FAILURE);
 	}
 
+	    // ignore kids, drop permissions
+#ifndef DEBUG
+	
+	signal(SIGCLD,SIG_IGN);
+
+	// we need zero permissions to do what we need
+	if ((pw = getpwnam("nobody"))){
+		setuid(pw->pw_uid);
+		setgid(pw->pw_gid);
+	}
 
 	// fork off :p
-#ifndef DEBUG
 	pid = fork();
+
 #else
 	pid = 0;
 #endif
@@ -117,6 +133,9 @@ void child_function(){
 
 	struct gps_data_t * gps_data;
 	struct gps_fix_t * gps_fix;
+
+	// drop the controlling tty and etc -- who cares if it fails though?
+	setsid();
 
 	// initialize the bind structure
 	MYSQL_BIND bind[7];

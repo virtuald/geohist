@@ -1,10 +1,8 @@
 #
 #	(C)2007 Dustin Spicuzza
 #
-#	http://autoconf-archive.cryp.to/macros-by-category.html
-#
 
-AC_INIT([gpslog],[0.1],[dustin@virtualroadside.com])
+AC_INIT([geoHist],[0.1],[dustin@virtualroadside.com])
 AM_INIT_AUTOMAKE([-Wall -Werror foreign])
 
 AC_PROG_CC

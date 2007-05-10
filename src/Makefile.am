@@ -1,8 +1,8 @@
 
-bin_PROGRAMS = gpslog
-noinst_HEADERS = gpslog.h
+bin_PROGRAMS = geohist
+noinst_HEADERS = geohist.h
 
-gpslog_SOURCES = main.c
-gpslog_LDADD = -lgps -lmysqlclient
+geohist_SOURCES = main.c
+geohist_LDADD = -lgps -lmysqlclient
 
 
