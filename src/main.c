@@ -193,7 +193,7 @@ void child_function(){
 							
 							// decide whether we want to ignore this value or not
 							// don't record the value if we ignored it
-							if (!first_time || (drift_latitude < GPS_DRIFT || drift_longitude < GPS_DRIFT)){
+							if (!first_time && drift_latitude < GPS_DRIFT && drift_longitude < GPS_DRIFT){
 
 								GPSLOG_OUT("Ignored! Drift val: lat %f long %f\n",drift_latitude,drift_longitude);
 								break;
@@ -227,7 +227,7 @@ void child_function(){
 
 							// decide whether we want to ignore this value or not
 							// don't record the value if we ignored it
-							if (!first_time || (drift_latitude < GPS_DRIFT || drift_longitude < GPS_DRIFT)){
+							if (!first_time && drift_latitude < GPS_DRIFT && drift_longitude < GPS_DRIFT){
 								GPSLOG_OUT("Ignored! Drift val: lat %f long %f\n",drift_latitude,drift_longitude);
 								break;
 							}
