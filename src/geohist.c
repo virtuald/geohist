@@ -32,6 +32,7 @@
 
 #include <sys/types.h>
 #include <pwd.h>
+#include <time.h>
 
 #include <stdint.h>
 #include <linux/limits.h>
@@ -51,6 +52,8 @@
 // globals.. ew
 MYSQL mysql;
 MYSQL_STMT * stmt;
+
+void child_function(void);
 
 int main(int argc, char ** argv){
 
@@ -126,25 +129,53 @@ int main(int argc, char ** argv){
 void child_function(){
 
 	int ret,i,first_time = 1;
-	double nan = NAN;
+	double nan = NAN, last_fix_time;
 
 	double gps_last_latitude = NAN, drift_latitude;
 	double gps_last_longitude = NAN, drift_longitude;
 
 	struct gps_data_t * gps_data;
 	struct gps_fix_t * gps_fix;
+	
+	// last_track_id is the last one written to the SQL database, current is the one 
+	// that should be written for the current SQL statement
+	long long int last_track_id = 0, current_track_id = 0;
+	double last_track_time = 0;
+	
+	int err;
+	MYSQL_RES * result;
+	MYSQL_ROW row;
 
 	// drop the controlling tty and etc -- who cares if it fails though?
 	setsid();
 
-	// initialize the bind structure
-	MYSQL_BIND bind[7];
-	memset(bind,0,sizeof(bind));
-	for (i = 0;i < 7;i++){
-		bind[i].buffer_type = MYSQL_TYPE_DOUBLE;
+	// get the biggest track_id
+	if (err = mysql_query(&mysql, "SELECT track_id, time FROM points ORDER BY id DESC LIMIT 1"))
+	{
+		fprintf(stderr,"Aborting: error finding track_id: %s\n",mysql_error(&mysql));
+		return;
 	}
+	
+	if (result = mysql_store_result(&mysql))
+	{
+		row = mysql_fetch_row(result);
+		last_track_id = atoll(row[0]);
+		last_track_time = atof(row[1]);
+		mysql_free_result(result);
+	}
+	
+	GPSLOG_OUT("last track_id was %lld\n", last_track_id);
+	
+	// initialize the bind structure
+	MYSQL_BIND bind[8];
+	memset(bind,0,sizeof(bind));
+	bind[0].buffer_type = MYSQL_TYPE_LONGLONG;
+	for (i = 1;i < 8;i++)
+		bind[i].buffer_type = MYSQL_TYPE_DOUBLE;
+	
+	last_fix_time = time(NULL);
 
-	while (1){
+	while (42){
 
 		// open a connection to gpsd
 		gps_data = gps_open("localhost",DEFAULT_GPSD_PORT);
@@ -155,7 +186,7 @@ void child_function(){
 		}else{
 
 			// continuously loop and log
-			while (1){
+			while (42){
 				
 				ret = gps_query(gps_data,"o\n");
 
@@ -172,9 +203,26 @@ void child_function(){
 					
 					gps_fix = &gps_data->fix;
 
-					GPSLOG_OUT("gpsd response: time %f ",gps_fix->time);
-					bind[0].buffer = &gps_fix->time;
+					// if the timestamp is wrong.. (before 1/1/2000), then try to compensate
+					if (gps_fix->time < 946702800)
+					{
+						// we assume this is close enough
+						GPSLOG_OUT("gpsd returned invalid timestamp: %f ", gps_fix->time);
+						last_fix_time += 10;
+					} else
+						last_fix_time = gps_fix->time;
+										
+					// increment the track id if necessary
+					if (last_track_time + TRACK_SEGMENT_TIMEOUT < last_fix_time)
+						current_track_id = last_track_id + 1;
+					else
+						current_track_id = last_track_id;
 
+					// write to the bind structure
+					GPSLOG_OUT("timestamp for fix: time %f ", last_fix_time);
+					bind[0].buffer = &current_track_id;
+					bind[1].buffer = &last_fix_time;
+						
 					// sometimes, these numbers will be nonsense, but thats ok.. :)
 					drift_latitude = fabs(gps_fix->latitude - gps_last_latitude);
 					drift_longitude = fabs(gps_fix->longitude - gps_last_longitude);
@@ -211,16 +259,20 @@ void child_function(){
 							gps_last_latitude = gps_fix->latitude;
 							gps_last_longitude = gps_fix->longitude; 
 
-							bind[1].buffer = (char*)&(gps_fix->latitude);
-							bind[2].buffer = (char*)&gps_fix->longitude;
-							bind[3].buffer = (char*)&gps_fix->track;
-							bind[4].buffer = (char*)&gps_fix->speed;
-							bind[5].buffer = (char*)&gps_fix->climb;
-							bind[6].buffer = (char*)&nan;
+							bind[2].buffer = (char*)&(gps_fix->latitude);
+							bind[3].buffer = (char*)&gps_fix->longitude;
+							bind[4].buffer = (char*)&gps_fix->track;
+							bind[5].buffer = (char*)&gps_fix->speed;
+							bind[6].buffer = (char*)&gps_fix->climb;
+							bind[7].buffer = (char*)&nan;
 
 							if (mysql_stmt_bind_param(stmt,bind) || mysql_stmt_execute(stmt))
 								fprintf(stderr,"error executing mysql statement: %s\n",mysql_stmt_error(stmt));
 
+							// for keeping track of seperate tracks
+							last_track_time = last_fix_time;
+							last_track_id = current_track_id;
+								
 							break;
 
 						case MODE_3D:
@@ -245,16 +297,20 @@ void child_function(){
 							gps_last_latitude = gps_fix->latitude;
 							gps_last_longitude = gps_fix->longitude;
 
-                            bind[1].buffer = &gps_fix->latitude;
-							bind[2].buffer = &gps_fix->longitude;
-							bind[3].buffer = &gps_fix->track;
-							bind[4].buffer = &gps_fix->speed;
-							bind[5].buffer = &gps_fix->climb;
-							bind[6].buffer = &gps_fix->altitude;
+                            bind[2].buffer = &gps_fix->latitude;
+							bind[3].buffer = &gps_fix->longitude;
+							bind[4].buffer = &gps_fix->track;
+							bind[5].buffer = &gps_fix->speed;
+							bind[6].buffer = &gps_fix->climb;
+							bind[7].buffer = &gps_fix->altitude;
 
 							if (mysql_stmt_bind_param(stmt,bind) || mysql_stmt_execute(stmt))
 								GPSLOG_OUT("error executing mysql statement: %s",mysql_stmt_error(stmt));
 
+							// for keeping track of seperate tracks
+							last_track_time = last_fix_time;
+							last_track_id = current_track_id;
+								
 							break;
 
 						default:

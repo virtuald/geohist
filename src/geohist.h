@@ -16,8 +16,11 @@
 // drift value
 #define GPS_DRIFT 0.0001
 
+// track segment timeout: 10 minutes
+#define TRACK_SEGMENT_TIMEOUT 600
+
 // sql statement to be executed
-#define SQL_INSERT_STMT "INSERT INTO points (time,latitude,longitude,course,speed,climb,altitude) VALUES (?,?,?,?,?,?,?)"
+#define SQL_INSERT_STMT "INSERT INTO points (track_id,time,latitude,longitude,course,speed,climb,altitude) VALUES (?,?,?,?,?,?,?,?)"
 // sql server
 #define SQL_SERVER "localhost"
 // sql database
@@ -35,8 +38,6 @@
 #else
 #define GPSLOG_OUT(fmt,...) //
 #endif
-
-void child_function(void);
 
 #endif
 

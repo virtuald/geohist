@@ -2,7 +2,7 @@
 #	(C)2007 Dustin Spicuzza
 #
 
-AC_INIT([geoHist],[0.1.1],[dustin@virtualroadside.com])
+AC_INIT([geoHist],[0.2.1],[dustin@virtualroadside.com])
 AM_INIT_AUTOMAKE([-Wall -Werror foreign])
 
 AC_PROG_CC
@@ -30,7 +30,7 @@ AC_SUBST(LIBGPS_LIBS)
 AC_HEADER_STDC
 
 AC_CHECK_HEADERS([mysql/mysql.h],[],[AC_MSG_ERROR("mysql client libraries are not installed!")])
-AC_CHECK_HEADERS([stdint.h stdlib.h string.h unistd.h linux/limits.h])
+AC_CHECK_HEADERS([stdint.h stdlib.h string.h unistd.h linux/limits.h time.h getopt.h])
 
 AC_CHECK_HEADERS([gps.h],[],[AC_MSG_ERROR("gpsd is not installed!")],
 	[#ifdef HAVE_STDINT_H
@@ -48,7 +48,7 @@ AC_TYPE_PID_T
 # library functions
 AC_FUNC_FORK
 AC_TYPE_SIGNAL
-AC_CHECK_FUNCS([memset])
+AC_CHECK_FUNCS([memset getopt])
 
 AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_FILES([
