@@ -1,0 +1,24 @@
+#!/bin/bash
+
+. /lib/lsb/init-functions
+
+case "$1" in
+
+start)
+        log_begin_msg "Starting geoHist"
+        start-stop-daemon --start --quiet --exec /usr/local/bin/geohist
+        log_end_msg $?
+        ;;
+
+stop)
+        log_begin_msg "Stopping geohist"
+        start-stop-daemon --stop --quiet --exec /usr/local/bin/geohist
+        log_end_msg $?
+        ;;
+*)
+        log_success_msg "Usage: /etc/init.d/geohist (start|stop)"
+        exit 1
+        ;;
+esac
+
+exit 0

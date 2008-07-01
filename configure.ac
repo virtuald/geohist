@@ -2,7 +2,7 @@
 #	(C)2007 Dustin Spicuzza
 #
 
-AC_INIT([geoHist],[0.2.1],[dustin@virtualroadside.com])
+AC_INIT([geoHist],[0.2],[dustin@virtualroadside.com])
 AM_INIT_AUTOMAKE([-Wall -Werror foreign])
 
 AC_PROG_CC

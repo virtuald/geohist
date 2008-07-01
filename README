@@ -1,4 +1,4 @@
-geoHist v0.1 - (C)2007 Dustin Spicuzza
+geoHist v0.2 - (C)2007-2008 Dustin Spicuzza
 ================================================================================
 
 This software is released under a modified BSD-style license agreement. Please
@@ -16,6 +16,7 @@ mysql database. It is designed to meet the following requirements:
 	* Small/fast, non-intrusive
 	* Robust
 	* Log data to an SQL database
+	* Export to GPX
 
 Description
 ============
@@ -26,8 +27,14 @@ still, and if you are then it will NOT log the data. It decides this using a
 simple drift factor. It will always log position to the database at least 
 once if there is a satellite fix.
 
+There is a program, geohistdump that can be used to export the GPS data from 
+the MySQL database into a GPX formatted file. By default, it will export a GPX
+1.0 file (because there is more information that can be output), but you can 
+export to GPX 1.1 with the -v 1.1 option. 
+
 I designed geoHist to be used with my linux-based car computer. It is designed
-to be configured once, and never touched again (except to export data).
+to be configured once, and (ideally) never touched again (except to export 
+data).
 
 System Requirements
 ====================
@@ -35,14 +42,13 @@ System Requirements
 	* GPSD (http://gpsd.berlios.de)
 	* A GPS device that works with GPSD
 	* MySQL (http://www.mysql.com)
-	
 
 Installation
 =============
 
 This is your typical autotools-based install... 
 
-	tar -xjf geoHist-0.1.tar.bz2
+	tar -xjf geoHist-XXX.tar.bz2
 	./configure
 	make && make install
 
@@ -51,9 +57,10 @@ Then, you need to create the table for geoHist to log stuff to.
 	mysql -u root -p < geoHist.sql
 
 You will need to add geoHist to your system startup scripts somehow. I have
-included a sample gentoo rcscript called geohist.init, which should be 
+included a sample gentoo rcscript called geohist.init.gentoo, which should be 
 copied to /etc/init.d/geohist. You can then run rc-update add geohist default
-and it should start at bootup.
+and it should start at bootup. There is an ubuntu/debian init script also,
+called "geohist.init.ubuntu"
 
 At the moment, there are no configuration files because I personally don't 
 feel the need to do so at the moment. If you want to change something, then 
@@ -65,14 +72,37 @@ If you are having issues or to verify proper configuration, then you can run
 it will print messages out to the console and tell you what its doing at 
 the moment.
 
-Usage
-======
+Export database to GPX Format
+=====================
 
-All this does is log your data into mysql. You will need to figure out what 
-exactly you want to do with that data. At the moment, I'm not quite sure 
-what I'm going to do with the data either, but if I figure something out 
-I will surely include it in the next release.
+There is now a way to dump the data to a GPX file. You can
+now use the geohistdump program to do this. 
 
+Usage: geohistdump -adeflnrv [-t tracklist] [output filename or - for stdout]
+
+  -l    list tracks
+  -r    delete tracks (requires -t)
+  -f    force delete tracks
+
+GPX Output Options
+
+  -n    File name/title
+  -a    Author name
+  -d    Description
+  -e    Email address of author
+  -v    GPX output format (1.0 [default] or 1.1)
+
+Note that when you specify multiple tracks, they are actually written
+to the GPX file as track segments, as part of one big track.
+
+If you are interested in validating the resulting XML file, you can use
+xmllint (from libxml2-utils in ubuntu) to do it: 
+
+GPX 1.0 (default geoHist output)
+xmllint --noout --schema http://www.topografix.com/GPX/1/0/gpx.xsd testfile.gpx
+
+GPX 1.1
+xmllint --noout --schema http://www.topografix.com/GPX/1/1/gpx.xsd testfile.gpx
 
 Comments/Questions
 ===================

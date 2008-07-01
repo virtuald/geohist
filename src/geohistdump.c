@@ -46,6 +46,8 @@
 
 #include "geohist.h"
 
+#define DATETIME_FORMAT "%FT%H:%M:%S"
+
 // globals.. ew
 MYSQL mysql;
 MYSQL_STMT * stmt;
@@ -113,11 +115,52 @@ void list_tracks()
 
 int delete_tracks(int * track_list, int track_count, int flag_f)
 {
-	printf("Deleting tracks! :o\n");
+	int i;
+	char * tmp;
+	char g = ' ';
+
+	if (track_count <= 0)
+	{
+		fprintf(stderr, "Error: You must specify specific tracks to delete tracks\n");
+		return EXIT_FAILURE;
+	}
+	
+	for (i = 0; i < track_count; i++)
+	{
+		if (track_list[i] == -1)
+			continue;
+	
+		if (!flag_f)
+		{
+			printf("Delete track %d? [y/n] ", track_list[i]);
+		
+			while ((g = getc(stdin)) != 'y' && g != 'n');
+			
+			if (g == 'n')
+				continue;
+		}
+		
+		printf("Deleting track_id %d ... ", track_list[i]);
+		
+		asprintf(&tmp,"DELETE FROM points WHERE track_id = %d", track_list[i]);
+		
+		// get the list of track id's
+		if (mysql_query(&mysql, tmp))
+		{
+			fprintf(stderr,"%s\n",mysql_error(&mysql));
+			free(tmp);
+			return EXIT_FAILURE;
+		}
+		
+		free(tmp);
+		printf("OK\n");
+	}
+	
+	return EXIT_SUCCESS;
 }
 
 int output_tracks(char * filename, int * track_list, int track_count,
-	char * name, char * author, char * desc, char * email)
+	char * name, char * author, char * desc, char * email, int gpx1_1)
 {
 	FILE * file;
 	MYSQL_RES * result;
@@ -125,6 +168,7 @@ int output_tracks(char * filename, int * track_list, int track_count,
 	int i, m_err;
 	char * tok, *tmp1, *tmp2;
 	char ftime[100];
+	double course;
 	time_t tm;
 	long long int track_id, last_track_id = -1;
 	
@@ -135,48 +179,74 @@ int output_tracks(char * filename, int * track_list, int track_count,
 			perror("output_tracks");
 			
 	// output GPX header, then each track
-	fprintf(file, 
-		"<?xml version=\"1.0\"?>\n"
-		"<gpx version=\"1.1\"\n"
-		"  creator=\"%s\"\n"
-		"  xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns=\"http://www.topografix.com/GPX/1/1\"\n"
-		"  xsi:schemaLocation=\"http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd\">\n",
-		PACKAGE_STRING
-	);
-	
-	fprintf(file, "<metadata>\n");
+	if (gpx1_1)
+		fprintf(file, 
+			"<?xml version=\"1.0\"?>\n"
+			"<gpx version=\"1.1\"\n"
+			"  creator=\"%s\"\n"
+			"  xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns=\"http://www.topografix.com/GPX/1/1\"\n"
+			"  xsi:schemaLocation=\"http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd\">\n"
+			"<metadata>\n",
+			PACKAGE_STRING
+		);
+	else
+		fprintf(file, 
+			"<?xml version=\"1.0\"?>\n"
+			"<gpx version=\"1.0\"\n"
+			"  creator=\"%s\"\n"
+			"  xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns=\"http://www.topografix.com/GPX/1/0\"\n"
+			"  xsi:schemaLocation=\"http://www.topografix.com/GPX/1/0 http://www.topografix.com/GPX/1/0/gpx.xsd\">\n",
+			PACKAGE_STRING
+		);
 	
 	// extra GPX stuff
 	if (name)
-		fprintf(file, "\t<name>%s</name>", name);
+		fprintf(file, "\t<name>%s</name>\n", name);
 	if (desc)
-		fprintf(file, "\t<desc>%s</desc>", name);
-	if (author || email)
+		fprintf(file, "\t<desc>%s</desc>\n", name);
+		
+	if (gpx1_1)
 	{
-		fprintf(file, "\t<author>\n");
-		if (author)
-			fprintf(file, "\t\t<name>%s</name>\n", author);
-		if (email)
+		if (author || email)
 		{
-			if (!(tok = strchr(email,'@')) || strchr(tok+1, '@'))
+			fprintf(file, "\t<author>\n");
+			if (author)
+				fprintf(file, "\t\t<name>%s</name>\n", author);
+			if (email)
 			{
-				return EXIT_FAILURE;
+				if (!(tok = strchr(email,'@')) || strchr(tok+1, '@'))
+				{
+					fprintf(stderr,"Invalid email address!\n");
+					return EXIT_FAILURE;
+				}
+				*tok = '\0';
+				fprintf(file, "\t\t<email id=\"%s\" domain=\"%s\" />\n", email, tok+1);
 			}
-			*tok = '\0';
-			fprintf(file, "\t\t<email id=\"%s\" domain=\"%s\" />\n", email, tok+1);
+			fprintf(file, "\t</author>\n");
 		}
-		fprintf(file, "</author>\n");
+	}
+	else
+	{
+		if (author)
+			fprintf(file, "\t<author>%s</author>\n", author);
+		if (email)
+			fprintf(file, "\t<email>%s</email>\n", email);
 	}
 	
+	/*
 	tm = time(NULL);
 	
-	if (!strftime(ftime, sizeof(ftime), "%a %b %d %H:%M:%S %Y", localtime(&tm)))
+	if (!strftime(ftime, sizeof(ftime), DATETIME_FORMAT, localtime(&tm)))
 	{
 		fprintf(stderr,"Error creating timestamp\n");
 		return EXIT_FAILURE;	
 	}
 	
-	fprintf(file, "\t<time>%s</time>\n</metadata>\n", ftime);
+	fprintf(file, "\t<time>%s</time>\n", ftime);
+	*/
+	
+	if (gpx1_1)
+		fprintf(file, "</metadata>\n");
 	
 	// go through the list of tracks, generate the GPX file
 	// if track_count == 0, then we have to scan everything, otherwise
@@ -204,7 +274,7 @@ int output_tracks(char * filename, int * track_list, int track_count,
 			}
 		}
 		
-		asprintf(&tmp1, "SELECT track_id, time, latitude, longitude, course, speed, climb, altitude FROM points WHERE %s ORDER BY id ASC", tmp2);
+		asprintf(&tmp1, "SELECT track_id, time, latitude, longitude, course, speed, altitude FROM points WHERE %s ORDER BY id ASC", tmp2);
 		m_err = mysql_query(&mysql, tmp1);
 		
 		free(tmp1);
@@ -237,20 +307,41 @@ int output_tracks(char * filename, int * track_list, int track_count,
 				last_track_id = track_id;
 			}
 			
-			// output a trackpoint
-			fprintf(file, "\t\t\t<trkpt lat=\"%s\" lon=\"%s\">\n"
-						  "\t\t\t\t<time>%s</time>\n"
-						  "\t\t\t\t<course>%s</course>\n"
-						  "\t\t\t\t<speed>%s</speed>\n"
-						  "\t\t\t\t<climb>%s</climb>\n"
-			, row[2], row[3], row[1], row[4], row [5], row[6]);
+			tm = atof(row[1]);
 			
-			if (atof(row[7]) == 0)
-				fprintf(file, "\t\t\t\t<fix>2d</fix>\n");
+			// convert the timestamp
+			if (!strftime(ftime, sizeof(ftime), DATETIME_FORMAT, localtime(&tm)))
+			{
+				fprintf(stderr,"Error creating timestamp\n");
+				return EXIT_FAILURE;	
+			}
+			
+			// output a trackpoint
+			
+			fprintf(file, "\t\t\t<trkpt lat=\"%s\" lon=\"%s\">\n", row[2], row[3]);
+			
+			if (gpx1_1)
+				fprintf(file,"\t\t\t\t<time>%s</time>\n",ftime);
 			else
-				fprintf(file, "\t\t\t\t<fix>3d</fix>\n"
-							  "\t\t\t\t<ele>%s</ele>\n",
-							row[7]);
+			{
+				course = atof(row[4]);
+				if (course < 0)
+					course = 360.0 + course;
+			
+				if (atof(row[6]) == 0)
+					fprintf(file, "\t\t\t\t<time>%s</time>\n"
+								  "\t\t\t\t<course>%f</course>\n"
+								  "\t\t\t\t<speed>%s</speed>\n"
+								  "\t\t\t\t<fix>2d</fix>\n"
+					, ftime, course, row [5]);
+				else
+					fprintf(file, "\t\t\t\t<ele>%s</ele>\n"
+								  "\t\t\t\t<time>%s</time>\n"
+								  "\t\t\t\t<course>%f</course>\n"
+								  "\t\t\t\t<speed>%s</speed>\n"
+								  "\t\t\t\t<fix>3d</fix>\n"
+					, row[6], ftime, course, row [5]);
+			}
 			
 			fprintf(file, "\t\t\t</trkpt>\n");
 		}
@@ -273,7 +364,7 @@ int output_tracks(char * filename, int * track_list, int track_count,
 int main(int argc, char ** argv)
 {
 	int flag_l = 0, flag_r = 0, flag_f = 0, error = 0;
-	int t1, t2 = -1, c, i , j, ret = EXIT_SUCCESS;
+	int t1, t2 = -1, c, i , j, ret = EXIT_SUCCESS, gpx1_1 = 0;
 	
 	char *tracks = NULL, *tracks_tmp = NULL, *tok, *itok;
 	int *track_list = NULL, track_count = 0;
@@ -288,7 +379,7 @@ int main(int argc, char ** argv)
 		exit(EXIT_FAILURE);
 	}
 
-	while ((c = getopt (argc, argv, "lrt:n:a:d:e:")) != -1)
+	while ((c = getopt (argc, argv, "lfrt:n:a:d:e:v:")) != -1 && !error)
 	{
 		switch(c)
 		{
@@ -304,23 +395,34 @@ int main(int argc, char ** argv)
 				break;
 			case 'd': desc = optarg;
 				break;
-			case 'e': desc = optarg;
+			case 'e': email = optarg;
 				break;
+			case 'v':
+				if (!strcmp(optarg, "1.1"))
+					gpx1_1 = 1;
+				else if (strcmp(optarg, "1.0"))
+				{
+					fprintf(stderr, "%s: Invalid GPX version specified!\n", argv[0]);
+					error = 1;
+				}
+				break;
+					
 			case '?':
 				if (optopt == 't')
 					fprintf(stderr, "%s: Option requires an argument -- t\n", argv[0]);
 				else if (optopt == '?')
-					printf("Usage: %s -ldf [-t tracklist] [output filename]\n\n"
+					printf("Usage: %s -adeflnrv [-t tracklist] [output filename or - for stdout]\n\n"
 						   "  -l\tlist tracks\n"
-						   "  -d\tdelete tracks (requires -t)\n"
+						   "  -r\tdelete tracks (requires -t)\n"
 						   "  -f\tforce delete tracks\n\n"
-						   "GPX Options\n\n"
+						   "GPX Output Options\n\n"
 						   "  -n\tFile name/title\n"
 						   "  -a\tAuthor name\n"
 						   "  -d\tDescription\n"
-						   "  -e\tEmail address of author\n\n"
+						   "  -e\tEmail address of author\n"
+						   "  -v\tGPX output format (1.0 [default] or 1.1)\n\n"
 						   "Note that when you specify multiple tracks, they are actually written\n"
-						   "to the GPX file as track segments, as part of one big track.", 
+						   "to the GPX file as track segments, as part of one big track.\n", 
 					argv[0]);
 			default:
 				error = 1;
@@ -332,9 +434,7 @@ int main(int argc, char ** argv)
 	if (!error && flag_l)
 		list_tracks();
 	else
-	{
-	
-		
+	{	
 		if (!error && process_tracks(tracks, &track_list, &track_count))
 		{
 			// delete tracks
@@ -342,7 +442,7 @@ int main(int argc, char ** argv)
 				ret = delete_tracks(track_list, track_count, flag_f);
 			// or output tracks to a file
 			else if (argc - optind == 1)
-				ret = output_tracks(argv[argc-1], track_list, track_count, name, author, desc, email);
+				ret = output_tracks(argv[argc-1], track_list, track_count, name, author, desc, email, gpx1_1);
 			else
 				fprintf(stderr,"Error: no output filename specified\n");
 		
