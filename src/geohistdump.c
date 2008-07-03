@@ -287,7 +287,7 @@ int output_tracks(char * filename, int * track_list, int track_count,
 		return EXIT_FAILURE;
 	}
 
-	fprintf(file,"\t<trk>\n");
+	fprintf(file,"\t<trk>\n\t\t<name>geoHist recorded tracks</name><src>GPS</src>\n");
 	
 	// now go through the result set and build XML out of it
 	if (result = mysql_store_result(&mysql))
