@@ -1,20 +1,21 @@
 #
-#	(C)2007 Dustin Spicuzza
+#	(C)2007-2008 Dustin Spicuzza
 #
 
 AC_INIT([geoHist],[0.2],[dustin@virtualroadside.com])
 AM_INIT_AUTOMAKE([-Wall -Werror foreign])
 
-AC_PROG_CC
-CFLAGS="$CFLAGS -std=c99"
+AC_PROG_CC_C99
 
 # options
 AC_ARG_ENABLE(debug,
 	AS_HELP_STRING([--enable-debug],[enable debugging output]))
 
 if test x$enable_debug = xyes; then
-	CFLAGS="$CFLAGS -DDEBUG"
+	CFLAGS="-ggdb -DDEBUG"
 fi
+
+CFLAGS="$CFLAGS -Wall"
 
 # libraries
 AC_CHECK_LIB([mysqlclient],[mysql_stmt_bind_param])
