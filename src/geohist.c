@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2007, Dustin Spicuzza
+* Copyright (c) 2007-2008, Dustin Spicuzza
 * All rights reserved.
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are met:
@@ -58,10 +58,10 @@ void child_function(void);
 int main(int argc, char ** argv){
 
 	pid_t pid;
+#ifndef DEBUG
 	struct passwd * pw;
 
 	// ignore kids, drop permissions
-#ifndef DEBUG
 	signal(SIGCLD,SIG_IGN);
 #endif
 
@@ -150,17 +150,19 @@ void child_function(){
 	setsid();
 
 	// get the biggest track_id
-	if (err = mysql_query(&mysql, "SELECT track_id, time FROM points ORDER BY id DESC LIMIT 1"))
+	if ((err = mysql_query(&mysql, "SELECT track_id, time FROM points ORDER BY id DESC LIMIT 1")))
 	{
 		fprintf(stderr,"Aborting: error finding track_id: %s\n",mysql_error(&mysql));
 		return;
 	}
 	
-	if (result = mysql_store_result(&mysql))
+	if ((result = mysql_store_result(&mysql)))
 	{
-		row = mysql_fetch_row(result);
-		last_track_id = atoll(row[0]);
-		last_track_time = atof(row[1]);
+		if ((row = mysql_fetch_row(result)))
+		{
+			last_track_id = atoll(row[0]);
+			last_track_time = atof(row[1]);
+		}
 		mysql_free_result(result);
 	}
 	

@@ -1,3 +1,15 @@
+0.2.1 (10/21/2008)
+==========================
+	- Fixed warnings from gcc
+	- Added debugging information
+	- Fixed segfault
+
+0.2 (07/03/2008)
+==========================
+	- Added program to export tracks to GPX format
+	- Fix for invalid GPS coordinates
+	- Changed database format
+
 0.1 (5/10/2007)
 ==========================
 	- First release

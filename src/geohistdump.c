@@ -72,12 +72,12 @@ void list_tracks()
 		return;
 	}
 	
-	if (result = mysql_store_result(&mysql))
+	if ((result = mysql_store_result(&mysql)))
 	{
-		while (row = mysql_fetch_row(result))
+		while ((row = mysql_fetch_row(result)))
 		{
 			asprintf(&tmp, "SELECT COUNT(id), MIN(time), MAX(time) FROM points WHERE track_id = %s", row[0]);
-			if (err = mysql_query(&mysql, tmp))
+			if ((err = mysql_query(&mysql, tmp)))
 			{
 				fprintf(stderr, "Error retrieving times for track_id %s: %s\n", row[0], mysql_error(&mysql));
 				break;
@@ -290,9 +290,9 @@ int output_tracks(char * filename, int * track_list, int track_count,
 	fprintf(file,"\t<trk>\n\t\t<name>geoHist recorded tracks</name><src>GPS</src>\n");
 	
 	// now go through the result set and build XML out of it
-	if (result = mysql_store_result(&mysql))
+	if ((result = mysql_store_result(&mysql)))
 	{
-		while (row = mysql_fetch_row(result))
+		while ((row = mysql_fetch_row(result)))
 		{
 			track_id = atoll(row[0]);
 			
@@ -364,9 +364,9 @@ int output_tracks(char * filename, int * track_list, int track_count,
 int main(int argc, char ** argv)
 {
 	int flag_l = 0, flag_r = 0, flag_f = 0, error = 0;
-	int t1, t2 = -1, c, i , j, ret = EXIT_SUCCESS, gpx1_1 = 0;
+	int c, ret = EXIT_SUCCESS, gpx1_1 = 0;
 	
-	char *tracks = NULL, *tracks_tmp = NULL, *tok, *itok;
+	char *tracks = NULL;
 	int *track_list = NULL, track_count = 0;
 	
 	char * name = NULL, * author = NULL, * desc = NULL, * email = NULL;
@@ -477,12 +477,12 @@ int process_tracks(char * tracks, int ** track_list, int * track_count)
 		
 	// split by comma
 	tracks_tmp = tracks;
-	while(tok = strtok(tracks_tmp,","))
+	while((tok = strtok(tracks_tmp,",")))
 	{
 		tracks_tmp = NULL;
 		
 		// if there is a delimiter
-		if (itok = strstr(tok, "-"))
+		if ((itok = strstr(tok, "-")))
 		{
 			// grab the two args
 			*itok = '\0';
